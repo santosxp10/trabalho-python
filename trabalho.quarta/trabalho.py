@@ -33,8 +33,6 @@ cursor.execute('''
 
 conn.commit()
 
-
-
 class Aluno:
     def __init__(self, nome, matricula):
         if not isinstance(nome, str) or not nome.strip():
@@ -69,7 +67,7 @@ class Disciplina:
 class Aplicacao:
     def __init__(self, root):
         self.root = root
-        self.root.title("old school")
+        self.root.title("Old School")
         self.root.configure(bg="#696773")
 
         self.frame = tk.Frame(root, bg="white", padx=60, pady=60)
@@ -122,6 +120,11 @@ class Aplicacao:
 
         tk.Button(self.frame, text="Mostrar Notas", font=button_font, width=18, command=self.mostrar_notas).grid(row=11, columnspan=2, pady=7)
 
+        # Novos botões adicionados
+        tk.Button(self.frame, text="Excluir Aluno", font=button_font, width=18, command=self.excluir_aluno).grid(row=12, columnspan=2, pady=7)
+        tk.Button(self.frame, text="Alterar Aluno", font=button_font, width=18, command=self.alterar_aluno).grid(row=13, columnspan=2, pady=7)
+        tk.Button(self.frame, text="Listar Alunos", font=button_font, width=18, command=self.listar_alunos).grid(row=14, columnspan=2, pady=7)
+
     def adicionar_aluno(self):
         nome = self.nome_aluno.get()
         try:
@@ -172,7 +175,6 @@ class Aplicacao:
 
             self.alunos[matricula].adicionar_nota(disciplina, nota)
             with sqlite3.connect('alunos.db3') as c:
-                print("Teste")
                 cc = c.cursor()
                 cc.execute("INSERT OR REPLACE INTO notas (matricula, disciplina, nota) VALUES (?, ?, ?)",
                            (matricula, disciplina_nome, nota))
@@ -203,6 +205,55 @@ class Aplicacao:
         except ValueError:
             messagebox.showerror("Erro", "Matrícula inválida.")
 
+    # Função para excluir aluno
+    def excluir_aluno(self):
+        try:
+            matricula = int(self.matricula_aluno.get())
+            if matricula not in self.alunos:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+                return
+
+            cursor.execute("DELETE FROM notas WHERE matricula = ?", (matricula,))
+            cursor.execute("DELETE FROM alunos WHERE matricula = ?", (matricula,))
+            conn.commit()
+
+            del self.alunos[matricula]
+            messagebox.showinfo("Sucesso", "Aluno excluído com sucesso!")
+            self.nome_aluno.delete(0, tk.END)
+            self.matricula_aluno.delete(0, tk.END)
+        except ValueError:
+            messagebox.showerror("Erro", "Matrícula inválida.")
+
+    # Função para alterar aluno
+    def alterar_aluno(self):
+        try:
+            matricula = int(self.matricula_aluno.get())
+            novo_nome = self.nome_aluno.get().strip()
+
+            if matricula not in self.alunos:
+                messagebox.showerror("Erro", "Aluno não encontrado.")
+                return
+            if not novo_nome:
+                messagebox.showerror("Erro", "Nome não pode estar vazio.")
+                return
+
+            cursor.execute("UPDATE alunos SET nome = ? WHERE matricula = ?", (novo_nome, matricula))
+            conn.commit()
+
+            self.alunos[matricula].nome = novo_nome
+            messagebox.showinfo("Sucesso", "Aluno alterado com sucesso!")
+        except ValueError:
+            messagebox.showerror("Erro", "Matrícula inválida.")
+
+    # Função para listar alunos
+    def listar_alunos(self):
+        cursor.execute("SELECT matricula, nome FROM alunos")
+        alunos = cursor.fetchall()
+        if not alunos:
+            messagebox.showinfo("Alunos", "Nenhum aluno cadastrado.")
+        else:
+            lista = "\n".join(f"{mat} - {nome}" for mat, nome in alunos)
+            messagebox.showinfo("Alunos Cadastrados", lista)
 
 if __name__ == "__main__":
     root = tk.Tk()
